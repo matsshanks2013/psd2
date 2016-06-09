@@ -1,0 +1,12 @@
+.metadata
+oauth2server/target
+oauth2server/logs
+psd2api/target
+psd2api/logs
+psd2integration/target
+psd2integration/logs
+RemoteSystemsTempFiles
+psd2datamodel/target/
+psd2demoapp/logs/
+psd2demoapp/target/
+psd2demowebclient/target/
