@@ -1,0 +1,117 @@
+package com.ibm.psd2.integration.bolts;
+
+import java.util.HashMap;
+import java.util.Map;
+
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.apache.storm.task.OutputCollector;
+import org.apache.storm.task.TopologyContext;
+import org.apache.storm.topology.OutputFieldsDeclarer;
+import org.apache.storm.topology.base.BaseRichBolt;
+import org.apache.storm.tuple.Fields;
+import org.apache.storm.tuple.Tuple;
+import org.apache.storm.tuple.Values;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.ibm.api.psd2.api.beans.account.BankAccountDetailsBean;
+import com.ibm.api.psd2.api.beans.transaction.TxnRequestDetailsBean;
+import com.ibm.psd2.integration.ArgumentsContainer;
+import com.ibm.psd2.integration.dao.MongoDao;
+import com.ibm.psd2.integration.dao.MongoDaoImpl;
+
+public class TxnProcessingBolt extends BaseRichBolt
+{
+	private static final Logger logger = LogManager.getLogger(TxnProcessingBolt.class);
+
+	ObjectMapper mapper = null;
+
+	private ArgumentsContainer ac;
+
+	private OutputCollector _collector = null;
+	private MongoDao paymentDao;
+	private MongoDao bankAccDao;
+
+	public TxnProcessingBolt(ArgumentsContainer ac)
+	{
+		this.ac = ac;
+		this.mapper = new ObjectMapper();
+	}
+
+	@Override
+	public void prepare(Map stormConf, TopologyContext context, OutputCollector collector)
+	{
+		_collector = collector;
+
+		this.paymentDao = new MongoDaoImpl(ac,
+				ac.getValue(ArgumentsContainer.KEYS.MONGODB_PSD2_PAYMENTS_COLLECTION.key()),
+				ac.getValue(ArgumentsContainer.KEYS.MONGODB_DB.key()));
+		this.bankAccDao = new MongoDaoImpl(ac,
+				ac.getValue(ArgumentsContainer.KEYS.MONGODB_PSD2_BANKACCOUNTS_COLLECTION.key()),
+				ac.getValue(ArgumentsContainer.KEYS.MONGODB_DB.key()));
+	}
+
+	@Override
+	public void execute(Tuple input)
+	{
+		logger.warn("Processing tuple: " + input);
+
+		try
+		{
+			String transaction = input.getString(0);
+			logger.warn("Parsing Transaction: " + transaction);
+
+			TxnRequestDetailsBean tdb = mapper.readValue(transaction, TxnRequestDetailsBean.class);
+
+			logger.warn("Processing Transaction Request:" + tdb.getId());
+
+			BankAccountDetailsBean from = new BankAccountDetailsBean();
+			BankAccountDetailsBean to = new BankAccountDetailsBean();
+
+			Map<String, Object> criteriaFrom = new HashMap<>();
+			Map<String, Object> criteriaTo = new HashMap<>();
+
+			criteriaFrom.put("id", tdb.getFrom().getAccount_id());
+			criteriaTo.put("id", tdb.getBody().getTo().getAccount_id());
+
+			from = bankAccDao.findOneByAll(criteriaFrom, from);
+			to = bankAccDao.findOneByAll(criteriaTo, to);
+
+			if (from != null)
+			{
+				double balance = from.getBalance().getAmount();
+				double amount = tdb.getBody().getValue().getAmount();
+				double charge = tdb.getCharge().getValue().getAmount();
+				balance = balance - amount - charge;
+				from.getBalance().setAmount(balance);
+				bankAccDao.update("id", from.getId(), "balance.amount", balance);
+			}
+
+			if (to != null)
+			{
+				double balance = to.getBalance().getAmount();
+				double amount = tdb.getBody().getValue().getAmount();
+				balance = balance + amount;
+				to.getBalance().setAmount(balance);
+				bankAccDao.update("id", to.getId(), "balance.amount", balance);
+			}
+
+			paymentDao.update("id", tdb.getId(), "status",
+					TxnRequestDetailsBean.TXN_STATUS_COMPLETED);
+
+			_collector.emit(input, new Values(tdb.getId(), mapper.writeValueAsString(tdb)));
+			_collector.ack(input);
+		}
+		catch (Exception e)
+		{
+			logger.error(e);
+		}
+	}
+
+	@Override
+	public void declareOutputFields(OutputFieldsDeclarer declarer)
+	{
+		declarer.declare(new Fields("uuid", "status"));
+	}
+
+}
