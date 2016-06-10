@@ -15,7 +15,8 @@ import org.apache.storm.topology.TopologyBuilder;
 
 import com.ibm.psd2.integration.ArgumentsContainer;
 import com.ibm.psd2.integration.bolts.MessageLoggingBolt;
-import com.ibm.psd2.integration.bolts.TxnProcessingBolt;
+import com.ibm.psd2.integration.bolts.TxnPostingBolt;
+import com.ibm.psd2.integration.bolts.TxnRequestProcessor;
 
 public class EventProcessTopology
 {
@@ -23,7 +24,8 @@ public class EventProcessTopology
 	
 	private static final String kafkaSpoutId = "KafkaSpout";
 	private static final String messageLogger = "LogMessageBolt";
-	private static final String txnProcessor = "TransactionProcessingBolt";
+	private static final String txnRequestProcessor = "TransactionRequestProcessingBolt";
+	private static final String txnPublisher = "TransactionPublishingBolt";
 	
 	
 	public EventProcessTopology (ArgumentsContainer ac)
@@ -49,8 +51,9 @@ public class EventProcessTopology
 		TopologyBuilder builder = new TopologyBuilder();
 		
 		builder.setSpout(kafkaSpoutId, kafkaSpout, 1);
-		builder.setBolt(txnProcessor, new TxnProcessingBolt(ac), 2).shuffleGrouping(kafkaSpoutId);
-		builder.setBolt(messageLogger, new MessageLoggingBolt(), 2).shuffleGrouping(kafkaSpoutId);
+		builder.setBolt(txnRequestProcessor, new TxnRequestProcessor(ac), 1).shuffleGrouping(kafkaSpoutId);
+		builder.setBolt(messageLogger, new MessageLoggingBolt(), 1).shuffleGrouping(kafkaSpoutId);
+		builder.setBolt(txnPublisher, new TxnPostingBolt(ac), 1).shuffleGrouping(txnRequestProcessor);
 		
 		return builder.createTopology();
 	}

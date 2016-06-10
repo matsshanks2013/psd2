@@ -1,5 +1,7 @@
 package com.ibm.api.psd2.api.controllers;
 
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -14,6 +16,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.ResponseBody;
@@ -25,8 +28,10 @@ import com.ibm.api.psd2.api.beans.account.BankAccountDetailsViewBean;
 import com.ibm.api.psd2.api.beans.account.BankAccountOverviewBean;
 import com.ibm.api.psd2.api.beans.subscription.SubscriptionInfoBean;
 import com.ibm.api.psd2.api.beans.subscription.ViewIdBean;
+import com.ibm.api.psd2.api.beans.transactions.TransactionBean;
 import com.ibm.api.psd2.api.dao.BankAccountDao;
 import com.ibm.api.psd2.api.dao.SubscriptionDao;
+import com.ibm.api.psd2.api.dao.TransactionDao;
 import com.ibm.api.psd2.api.response.BankAccountOverviewVisitor;
 import com.ibm.api.psd2.api.response.BankAccountOwnerViewVisitor;
 
@@ -41,6 +46,9 @@ public class BankAccountController extends APIController
 	@Autowired
 	SubscriptionDao sdao;
 
+	@Autowired
+	TransactionDao tdao;
+
 	@Value("${version}")
 	private String version;
 
@@ -54,7 +62,7 @@ public class BankAccountController extends APIController
 		{
 			// @Todo: Check if the user is authorized to view this account or
 			// not.
-			
+
 			String user = (String) auth.getPrincipal();
 			ViewIdBean ownerView = new ViewIdBean();
 			ownerView.setId(Constants.OWNER_VIEW);
@@ -216,6 +224,79 @@ public class BankAccountController extends APIController
 		{
 			logger.error(e);
 			response = ResponseEntity.badRequest().body("ERROR: " + e.getMessage());
+		}
+		return response;
+	}
+
+	@PreAuthorize("#oauth2.hasScope('write')")
+	@RequestMapping(method = RequestMethod.GET, value = "/banks/{bankId}/accounts/{accountId}/{viewId}/transactions/{txnId}/transaction", produces = MediaType.APPLICATION_JSON_VALUE)
+	public @ResponseBody ResponseEntity<TransactionBean> getTransactionById(@PathVariable("bankId") String bankId,
+			@PathVariable("accountId") String accountId, @PathVariable("txnId") String txnId, Authentication auth)
+	{
+		ResponseEntity<TransactionBean> response;
+		try
+		{
+			String user = (String) auth.getPrincipal();
+			ViewIdBean ownerView = new ViewIdBean();
+			ownerView.setId(Constants.OWNER_VIEW);
+
+			SubscriptionInfoBean sib = sdao.getSubscriptionInfo(user, accountId, bankId);
+			if (sib == null || !sib.getViewIds().contains(ownerView))
+			{
+				throw new IllegalAccessException("Not Subscribed");
+			}
+
+			TransactionBean t = tdao.getTransactionById(bankId, accountId, txnId);
+
+			response = ResponseEntity.ok(t);
+
+		} catch (Exception ex)
+		{
+			logger.error(ex);
+			response = ResponseEntity.badRequest().body(null);
+		}
+		return response;
+	}
+
+	@PreAuthorize("#oauth2.hasScope('write')")
+	@RequestMapping(method = RequestMethod.GET, value = "/banks/{bankId}/accounts/{accountId}/{viewId}/transactions", produces = MediaType.APPLICATION_JSON_VALUE)
+	public @ResponseBody ResponseEntity<List<TransactionBean>> getTransactions(@PathVariable("bankId") String bankId,
+			@PathVariable("accountId") String accountId,
+			@RequestHeader(value = "obp_sort_direction", required = false) String sortDirection,
+			@RequestHeader(value = "obp_limit", required = false) Integer limit,
+			@RequestHeader(value = "obp_from_date", required = false) String fromDate,
+			@RequestHeader(value = "obp_to_date", required = false) String toDate,
+			@RequestHeader(value = "obp_sort_by", required = false) String sortBy, 
+			@RequestHeader(value = "obp_offset", required=false) Integer number, Authentication auth)
+	{
+		ResponseEntity<List<TransactionBean>> response;
+		try
+		{
+			String user = (String) auth.getPrincipal();
+			ViewIdBean ownerView = new ViewIdBean();
+			ownerView.setId(Constants.OWNER_VIEW);
+
+			SubscriptionInfoBean sib = sdao.getSubscriptionInfo(user, accountId, bankId);
+			if (sib == null || !sib.getViewIds().contains(ownerView))
+			{
+				throw new IllegalAccessException("Not Subscribed");
+			}
+
+			if (tdao == null)
+			{
+				logger.error("tdao is null");
+			}
+			List<TransactionBean> t = tdao.getTransactions(bankId, accountId, sortDirection, limit, fromDate, toDate, sortBy, number);
+
+			response = ResponseEntity.ok(t);
+
+		} catch (Exception ex)
+		{
+			StringWriter sw = new StringWriter();
+			PrintWriter pw = new PrintWriter(sw);
+			ex.printStackTrace(pw);
+			logger.error(sw.toString());
+			response = ResponseEntity.badRequest().body(null);
 		}
 		return response;
 	}

@@ -1,7 +1,9 @@
 package com.ibm.psd2.integration.bolts;
 
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -14,15 +16,16 @@ import org.apache.storm.tuple.Tuple;
 import org.apache.storm.tuple.Values;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.ibm.api.psd2.api.beans.UUIDGenerator;
 import com.ibm.api.psd2.api.beans.account.BankAccountDetailsBean;
 import com.ibm.api.psd2.api.beans.payments.TxnRequestDetailsBean;
 import com.ibm.psd2.integration.ArgumentsContainer;
 import com.ibm.psd2.integration.dao.MongoDao;
 import com.ibm.psd2.integration.dao.MongoDaoImpl;
 
-public class TxnProcessingBolt extends BaseRichBolt
+public class TxnRequestProcessor extends BaseRichBolt
 {
-	private static final Logger logger = LogManager.getLogger(TxnProcessingBolt.class);
+	private static final Logger logger = LogManager.getLogger(TxnRequestProcessor.class);
 
 	ObjectMapper mapper = null;
 
@@ -32,7 +35,7 @@ public class TxnProcessingBolt extends BaseRichBolt
 	private MongoDao paymentDao;
 	private MongoDao bankAccDao;
 
-	public TxnProcessingBolt(ArgumentsContainer ac)
+	public TxnRequestProcessor(ArgumentsContainer ac)
 	{
 		this.ac = ac;
 		this.mapper = new ObjectMapper();
@@ -96,13 +99,19 @@ public class TxnProcessingBolt extends BaseRichBolt
 				bankAccDao.update("id", to.getId(), "balance.amount", balance);
 			}
 
-			paymentDao.update("id", tdb.getId(), "status",
-					TxnRequestDetailsBean.TXN_STATUS_COMPLETED);
+			tdb.setStatus(TxnRequestDetailsBean.TXN_STATUS_COMPLETED);
+			tdb.setEnd_date(new Date());
+			tdb.setTransaction_ids(UUIDGenerator.generateUUID());
 
-			_collector.emit(input, new Values(tdb.getId(), mapper.writeValueAsString(tdb)));
+			paymentDao.update("id", tdb.getId(), "status", tdb.getStatus());
+			paymentDao.update("id", tdb.getId(), "end_date", tdb.getEnd_date());
+			paymentDao.update("id", tdb.getId(), "transaction_ids", UUIDGenerator.generateUUID());
+
+			_collector.emit(input, new Values(tdb.getId(), mapper.writeValueAsString(from),
+					mapper.writeValueAsString(to), mapper.writeValueAsString(tdb)));
 			_collector.ack(input);
-		}
-		catch (Exception e)
+
+		} catch (Exception e)
 		{
 			logger.error(e);
 		}
@@ -111,7 +120,7 @@ public class TxnProcessingBolt extends BaseRichBolt
 	@Override
 	public void declareOutputFields(OutputFieldsDeclarer declarer)
 	{
-		declarer.declare(new Fields("uuid", "status"));
+		declarer.declare(new Fields("uuid", "source", "to", "txn"));
 	}
 
 }
