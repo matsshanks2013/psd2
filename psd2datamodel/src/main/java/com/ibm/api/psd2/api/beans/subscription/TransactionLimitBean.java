@@ -3,9 +3,8 @@ package com.ibm.api.psd2.api.beans.subscription;
 import java.io.Serializable;
 
 import com.ibm.api.psd2.api.beans.AmountBean;
-import com.ibm.api.psd2.api.beans.ResponseBean;
 
-public class TransactionLimitBean implements Serializable, ResponseBean
+public class TransactionLimitBean implements Serializable
 {
 
 	private TransactionRequestTypeBean transaction_request_type;

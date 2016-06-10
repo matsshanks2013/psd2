@@ -12,9 +12,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
-import com.ibm.api.psd2.api.beans.ResponseBean;
 import com.ibm.api.psd2.api.beans.account.BankAccountDetailsBean;
-import com.ibm.api.psd2.api.beans.account.BankAccountOverviewBean;
 import com.mongodb.client.FindIterable;
 import com.mongodb.client.MongoCollection;
 
@@ -34,8 +32,7 @@ public class BankAccountDaoImpl implements BankAccountDao
 	private String bankAccounts;
 
 	@Override
-	public BankAccountDetailsBean getBankAccountDetails(String bankId, String accountId)
-			throws Exception
+	public BankAccountDetailsBean getBankAccountDetails(String bankId, String accountId) throws Exception
 	{
 		logger.info("bankId = " + bankId + ", accountId = " + accountId);
 		MongoCollection<Document> coll = conn.getDB().getCollection(bankAccounts);
@@ -43,8 +40,9 @@ public class BankAccountDaoImpl implements BankAccountDao
 				.projection(excludeId());
 		BankAccountDetailsBean b = null;
 
-		for (Document document : iterable)
+		if (iterable != null)
 		{
+			Document document = iterable.first();
 			if (document != null)
 			{
 				logger.info("message = " + document.toJson());
@@ -56,14 +54,13 @@ public class BankAccountDaoImpl implements BankAccountDao
 	}
 
 	@Override
-	public ArrayList<ResponseBean> getBankAccounts(String username, String bank_id) throws Exception
+	public ArrayList<BankAccountDetailsBean> getBankAccounts(String username, String bank_id) throws Exception
 	{
 		logger.info("bankId = " + bank_id + ", username = " + username);
 		MongoCollection<Document> coll = conn.getDB().getCollection(bankAccounts);
-		FindIterable<Document> iterable = coll
-				.find(and(eq("username", username), eq("bank_id", bank_id)))
+		FindIterable<Document> iterable = coll.find(and(eq("username", username), eq("bank_id", bank_id)))
 				.projection(excludeId());
-		ArrayList<ResponseBean> accList = null;
+		ArrayList<BankAccountDetailsBean> accList = null;
 
 		for (Document document : iterable)
 		{
@@ -71,19 +68,11 @@ public class BankAccountDaoImpl implements BankAccountDao
 			{
 				logger.info("message = " + document.toJson());
 				BankAccountDetailsBean b = mdp.parse(document, new BankAccountDetailsBean());
-				if (b != null)
+				if (accList == null)
 				{
-					BankAccountOverviewBean bo = new BankAccountOverviewBean();
-					bo.setBank_id(b.getBank_id());
-					bo.setId(b.getId());
-					bo.setLabel(b.getLabel());
-
-					if (accList == null)
-					{
-						accList = new ArrayList<>();
-					}
-					accList.add(bo);
+					accList = new ArrayList<>();
 				}
+				accList.add(b);
 			}
 		}
 
@@ -91,8 +80,8 @@ public class BankAccountDaoImpl implements BankAccountDao
 	}
 
 	@Override
-	public BankAccountDetailsBean getBankAccountDetails(String bankId, String accountId,
-			String username) throws Exception
+	public BankAccountDetailsBean getBankAccountDetails(String bankId, String accountId, String username)
+			throws Exception
 	{
 		logger.info("bankId = " + bankId + ", accountId = " + accountId);
 		MongoCollection<Document> coll = conn.getDB().getCollection(bankAccounts);
@@ -101,8 +90,9 @@ public class BankAccountDaoImpl implements BankAccountDao
 				.projection(excludeId());
 		BankAccountDetailsBean b = null;
 
-		for (Document document : iterable)
+		if (iterable != null)
 		{
+			Document document = iterable.first();
 			if (document != null)
 			{
 				logger.info("message = " + document.toJson());

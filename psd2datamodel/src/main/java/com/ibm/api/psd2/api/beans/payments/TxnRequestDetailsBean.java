@@ -1,13 +1,12 @@
-package com.ibm.api.psd2.api.beans.transaction;
+package com.ibm.api.psd2.api.beans.payments;
 
 import java.io.Serializable;
 import java.util.Date;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.ibm.api.psd2.api.beans.ResponseBean;
 
-public class TxnRequestDetailsBean implements Serializable, ResponseBean
+public class TxnRequestDetailsBean implements Serializable
 {
 	public static final String TXN_STATUS_INITIATED="INITIATED";
 	public static final String TXN_STATUS_COMPLETED="COMPLETED";

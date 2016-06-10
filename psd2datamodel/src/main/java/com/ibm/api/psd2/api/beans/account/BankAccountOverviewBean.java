@@ -2,9 +2,7 @@ package com.ibm.api.psd2.api.beans.account;
 
 import java.io.Serializable;
 
-import com.ibm.api.psd2.api.beans.ResponseBean;
-
-public class BankAccountOverviewBean implements Serializable, ResponseBean
+public class BankAccountOverviewBean implements Serializable
 {
 	private String id;
 	private String label;

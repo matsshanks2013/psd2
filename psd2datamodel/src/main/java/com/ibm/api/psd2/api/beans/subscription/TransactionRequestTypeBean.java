@@ -2,9 +2,7 @@ package com.ibm.api.psd2.api.beans.subscription;
 
 import java.io.Serializable;
 
-import com.ibm.api.psd2.api.beans.ResponseBean;
-
-public class TransactionRequestTypeBean implements Serializable, ResponseBean
+public class TransactionRequestTypeBean implements Serializable
 {
 	public static enum TYPES 
 	{

@@ -1,6 +1,7 @@
 package com.ibm.api.psd2.api.controllers;
 
-
+import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 
 import org.apache.logging.log4j.LogManager;
@@ -19,12 +20,15 @@ import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.ibm.api.psd2.api.Constants;
-import com.ibm.api.psd2.api.beans.ResponseBean;
 import com.ibm.api.psd2.api.beans.account.BankAccountDetailsBean;
-import com.ibm.api.psd2.api.beans.account.BankAccountDetailsOwnerViewBean;
+import com.ibm.api.psd2.api.beans.account.BankAccountDetailsViewBean;
+import com.ibm.api.psd2.api.beans.account.BankAccountOverviewBean;
 import com.ibm.api.psd2.api.beans.subscription.SubscriptionInfoBean;
+import com.ibm.api.psd2.api.beans.subscription.ViewIdBean;
 import com.ibm.api.psd2.api.dao.BankAccountDao;
 import com.ibm.api.psd2.api.dao.SubscriptionDao;
+import com.ibm.api.psd2.api.response.BankAccountOverviewVisitor;
+import com.ibm.api.psd2.api.response.BankAccountOwnerViewVisitor;
 
 @RestController
 public class BankAccountController extends APIController
@@ -33,7 +37,7 @@ public class BankAccountController extends APIController
 
 	@Autowired
 	BankAccountDao bad;
-	
+
 	@Autowired
 	SubscriptionDao sdao;
 
@@ -42,118 +46,173 @@ public class BankAccountController extends APIController
 
 	@PreAuthorize("#oauth2.hasScope('write')")
 	@RequestMapping(method = RequestMethod.GET, value = "/my/banks/{bankId}/accounts", produces = MediaType.APPLICATION_JSON_VALUE)
-	public @ResponseBody ResponseEntity<List<ResponseBean>> getBankAccounts(
+	public @ResponseBody ResponseEntity<List<BankAccountOverviewBean>> getBankAccounts(
 			@PathVariable("bankId") String bankId, Authentication auth)
 	{
-		ResponseEntity<List<ResponseBean>> response;
+		ResponseEntity<List<BankAccountOverviewBean>> response;
 		try
 		{
-			//@Todo: Check if the user is authorized to view this account or not.
+			// @Todo: Check if the user is authorized to view this account or
+			// not.
 			
 			String user = (String) auth.getPrincipal();
-			List<ResponseBean> ba = bad.getBankAccounts(user, bankId);
-			response = ResponseEntity.ok(ba);
-		}
-		catch (Exception ex)
+			ViewIdBean ownerView = new ViewIdBean();
+			ownerView.setId(Constants.OWNER_VIEW);
+
+			List<SubscriptionInfoBean> lstSib = sdao.getSubscriptionInfo(user, bankId);
+
+			if (lstSib == null)
+			{
+				throw new IllegalAccessException("Not Subscribed");
+			}
+
+			// Get a list of accountid from subscription info list that has
+			// owner view enabled
+
+			List<String> accountIds = new ArrayList<>();
+			for (Iterator<SubscriptionInfoBean> iterator = lstSib.iterator(); iterator.hasNext();)
+			{
+				SubscriptionInfoBean s = iterator.next();
+				if (s.getViewIds().contains(ownerView))
+				{
+					accountIds.add(s.getAccountId());
+				}
+			}
+
+			List<BankAccountDetailsBean> ba = bad.getBankAccounts(user, bankId);
+
+			List<BankAccountOverviewBean> bol = null;
+			BankAccountOverviewVisitor bav = new BankAccountOverviewVisitor();
+			for (Iterator<BankAccountDetailsBean> iterator = ba.iterator(); iterator.hasNext();)
+			{
+
+				BankAccountDetailsBean b = iterator.next();
+
+				if (!accountIds.isEmpty() && accountIds.contains(b.getId()))
+				{
+					b.registerVisitor(BankAccountOverviewBean.class.getName() + ":" + Constants.OWNER_VIEW, bav);
+
+					if (bol == null)
+					{
+						bol = new ArrayList<>();
+					}
+					bol.add(b.getBankAccountOverview(Constants.OWNER_VIEW));
+				}
+			}
+
+			response = ResponseEntity.ok(bol);
+		} catch (Exception ex)
 		{
-			response = handleExceptions(ex);
+			logger.error(ex);
+			response = ResponseEntity.badRequest().body(null);
 		}
 		return response;
 	}
 
 	@PreAuthorize("#oauth2.hasScope('write')")
 	@RequestMapping(method = RequestMethod.GET, value = "/banks/{bankId}/accounts/{accountId}/{viewId}/account", produces = MediaType.APPLICATION_JSON_VALUE)
-	public @ResponseBody ResponseEntity<ResponseBean> getAccountById(
+	public @ResponseBody ResponseEntity<BankAccountDetailsViewBean> getAccountById(
 			@PathVariable("bankId") String bankId, @PathVariable("accountId") String accountId,
 			@PathVariable("viewId") String viewId, Authentication auth)
 	{
-		ResponseEntity<ResponseBean> response;
+		ResponseEntity<BankAccountDetailsViewBean> response;
 		try
-		{			
+		{
 			String user = (String) auth.getPrincipal();
-			SubscriptionInfoBean sib = sdao.getSubscriptionInfo(user, viewId, accountId, bankId);
-			if (sib == null)
+			ViewIdBean specifiedView = new ViewIdBean();
+			specifiedView.setId(viewId);
+
+			SubscriptionInfoBean sib = sdao.getSubscriptionInfo(user, accountId, bankId);
+			if (sib == null || !sib.getViewIds().contains(specifiedView))
 			{
 				throw new IllegalAccessException("Not Subscribed");
 			}
 
 			BankAccountDetailsBean b = bad.getBankAccountDetails(bankId, accountId, user);
-			BankAccountDetailsOwnerViewBean bo = null;
-			
+			BankAccountDetailsViewBean bo = null;
+
 			if (b == null)
 			{
 				throw new IllegalArgumentException("Account Not Found");
 			}
-			
+
+			BankAccountOwnerViewVisitor bv = new BankAccountOwnerViewVisitor();
 			if (Constants.OWNER_VIEW.equals(viewId))
 			{
-				bo = new BankAccountDetailsOwnerViewBean(b);
+				b.registerVisitor(BankAccountDetailsViewBean.class.getName() + ":" + viewId, bv);
+				bo = b.getBankAccountDetails(viewId);
 				response = ResponseEntity.ok(bo);
-			}
-			else
+			} else
 			{
-				throw new IllegalArgumentException("View ID is incorrect. Currently supported ones are: " + Constants.OWNER_VIEW);
+				throw new IllegalArgumentException(
+						"View ID is incorrect. Currently supported ones are: " + Constants.OWNER_VIEW);
 			}
-		}
-		catch (Exception ex)
+		} catch (Exception ex)
 		{
-			response = handleException(ex);
+			logger.error(ex);
+			response = ResponseEntity.badRequest().body(null);
 		}
 		return response;
 	}
-	
+
 	@PreAuthorize("#oauth2.hasScope('write')")
 	@RequestMapping(method = RequestMethod.GET, value = "/my/banks/{bankId}/accounts/{accountId}/account", produces = MediaType.APPLICATION_JSON_VALUE)
-	public @ResponseBody ResponseEntity<ResponseBean> getAccountById(
-			@PathVariable("bankId") String bankId, @PathVariable("accountId") String accountId,Authentication auth)
+	public @ResponseBody ResponseEntity<BankAccountDetailsViewBean> getAccountById(
+			@PathVariable("bankId") String bankId, @PathVariable("accountId") String accountId, Authentication auth)
 	{
-		ResponseEntity<ResponseBean> response;
+		ResponseEntity<BankAccountDetailsViewBean> response;
 		try
-		{			
+		{
 			String user = (String) auth.getPrincipal();
+			ViewIdBean ownerView = new ViewIdBean();
+			ownerView.setId(Constants.OWNER_VIEW);
+
 			SubscriptionInfoBean sib = sdao.getSubscriptionInfo(user, accountId, bankId);
-			if (sib == null)
+			if (sib == null || !sib.getViewIds().contains(ownerView))
 			{
 				throw new IllegalAccessException("Not Subscribed");
 			}
 
 			BankAccountDetailsBean b = bad.getBankAccountDetails(bankId, accountId, user);
-			BankAccountDetailsOwnerViewBean bo = null;
-			
+			BankAccountDetailsViewBean bo = null;
+
 			if (b == null)
 			{
 				throw new IllegalArgumentException("Account Not Found");
 			}
-			
-			bo = new BankAccountDetailsOwnerViewBean(b);
+
+			BankAccountOwnerViewVisitor bv = new BankAccountOwnerViewVisitor();
+			b.registerVisitor(BankAccountDetailsViewBean.class.getName() + ":" + Constants.OWNER_VIEW, bv);
+			bo = b.getBankAccountDetails(Constants.OWNER_VIEW);
 			response = ResponseEntity.ok(bo);
-		}
-		catch (Exception ex)
+
+		} catch (Exception ex)
 		{
-			response = handleException(ex);
+			logger.error(ex);
+			response = ResponseEntity.badRequest().body(null);
 		}
 		return response;
-	}	
-	
+	}
+
 	@RequestMapping(method = RequestMethod.POST, value = "/admin/account", produces = MediaType.ALL_VALUE)
 	public @ResponseBody ResponseEntity<String> createAccount(@RequestBody BankAccountDetailsBean b)
 	{
 		ResponseEntity<String> response;
 		try
 		{
-			//@Todo: Check if the user is authorized to view this account or not.
+			// @Todo: Check if the user is authorized to view this account or
+			// not.
 
 			if (b == null)
 			{
 				throw new IllegalArgumentException("No Account Specified");
 			}
-			
+
 			logger.info("BankAccountDetailsBean = " + b.toString());
-			
+
 			bad.createBankAccountDetails(b);
-			response= ResponseEntity.ok("SUCCESS");
-		}
-		catch (Exception e)
+			response = ResponseEntity.ok("SUCCESS");
+		} catch (Exception e)
 		{
 			logger.error(e);
 			response = ResponseEntity.badRequest().body("ERROR: " + e.getMessage());

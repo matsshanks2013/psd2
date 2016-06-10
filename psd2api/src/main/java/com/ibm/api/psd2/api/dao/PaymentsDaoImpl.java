@@ -17,14 +17,13 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
 import com.ibm.api.psd2.api.Constants;
-import com.ibm.api.psd2.api.beans.ResponseBean;
 import com.ibm.api.psd2.api.beans.UUIDGenerator;
+import com.ibm.api.psd2.api.beans.payments.TxnChallengeAnswerBean;
+import com.ibm.api.psd2.api.beans.payments.TxnChallengeBean;
+import com.ibm.api.psd2.api.beans.payments.TxnPartyBean;
+import com.ibm.api.psd2.api.beans.payments.TxnRequestBean;
+import com.ibm.api.psd2.api.beans.payments.TxnRequestDetailsBean;
 import com.ibm.api.psd2.api.beans.subscription.SubscriptionInfoBean;
-import com.ibm.api.psd2.api.beans.transaction.TxnChallengeAnswerBean;
-import com.ibm.api.psd2.api.beans.transaction.TxnChallengeBean;
-import com.ibm.api.psd2.api.beans.transaction.TxnRequestDetailsBean;
-import com.ibm.api.psd2.api.beans.transaction.TxnPartyBean;
-import com.ibm.api.psd2.api.beans.transaction.TxnRequestBean;
 import com.ibm.api.psd2.api.rules.PaymentRules;
 import com.mongodb.client.FindIterable;
 import com.mongodb.client.MongoCollection;
@@ -42,22 +41,14 @@ public class PaymentsDaoImpl implements PaymentsDao
 	private MongoDocumentParser mdp;
 
 	@Autowired
-	private SubscriptionDao sdao;
-
-	@Autowired
 	private PaymentRules pr;
 
 	@Value("${mongodb.collection.payments}")
 	private String payments;
 
 	@Override
-	public TxnRequestDetailsBean createTransactionRequest(TxnRequestBean trb, TxnPartyBean payee,
-			String username, String viewId, String txnType) throws Exception
+	public TxnRequestDetailsBean createTransactionRequest(SubscriptionInfoBean sib, TxnRequestBean trb, TxnPartyBean payee, String txnType) throws Exception
 	{
-		// Check if the from-party is owner of this account or not
-		SubscriptionInfoBean sib = sdao.getSubscriptionInfo(username, viewId, payee.getAccount_id(),
-				payee.getBank_id());
-
 		if (!pr.isTransactionTypeAllowed(sib, txnType))
 		{
 			throw new IllegalArgumentException(
@@ -140,14 +131,14 @@ public class PaymentsDaoImpl implements PaymentsDao
 	}
 
 	@Override
-	public List<ResponseBean> getTransactionRequests(String username, String viewId,
+	public List<TxnRequestDetailsBean> getTransactionRequests(String username, String viewId,
 			String accountId, String bankId) throws Exception
 	{
 		MongoCollection<Document> coll = conn.getDB().getCollection(payments);
 		FindIterable<Document> iterable = coll
 				.find(and(eq("from.account_id", accountId), eq("from.bank_id", bankId))).projection(excludeId());;
 
-		List<ResponseBean> txns = null;
+		List<TxnRequestDetailsBean> txns = null;
 
 		for (Document document : iterable)
 		{

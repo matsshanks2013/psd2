@@ -3,15 +3,13 @@ package com.ibm.api.psd2.api.beans.subscription;
 import java.io.Serializable;
 import java.util.ArrayList;
 
-import com.ibm.api.psd2.api.beans.ResponseBean;
-
-public class SubscriptionInfoBean implements Serializable, ResponseBean
+public class SubscriptionInfoBean implements Serializable
 {
 
 	private String username;
 	private String accountId;
 	private String bank_id;
-	private String viewId;
+	private ArrayList<ViewIdBean> viewIds;
 	
 	private ArrayList<TransactionRequestTypeBean> transaction_request_types;
 	private ArrayList<TransactionLimitBean> limits;
@@ -57,15 +55,26 @@ public class SubscriptionInfoBean implements Serializable, ResponseBean
 	{
 		this.bank_id = bank_id;
 	}
-	public String getViewId()
+	public ArrayList<ViewIdBean> getViewIds()
 	{
-		return viewId;
+		return viewIds;
 	}
 
-	public void setViewId(String viewId)
+	public void setViewIds(ArrayList<ViewIdBean> viewIds)
 	{
-		this.viewId = viewId;
+		this.viewIds = viewIds;
 	}
+	
+	public void addViewIds(ViewIdBean viewId)
+	{
+		if (this.viewIds == null)
+		{
+			this.viewIds = new ArrayList<>();
+		}
+		
+		this.viewIds.add(viewId);
+	}
+	
 	public void addTransaction_request_types(TransactionRequestTypeBean b)
 	{
 		if (transaction_request_types == null)

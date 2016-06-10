@@ -5,15 +5,18 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ibm.api.psd2.api.beans.AmountBean;
 import com.ibm.api.psd2.api.beans.Visitor;
 
-public class BankAccountDetailsBean implements Serializable
+@JsonInclude(value = Include.NON_EMPTY)
+public class BankAccountDetailsViewBean implements Serializable
 {
 
-	private Map<String, Visitor> visitors;
+	private static Map<String, Visitor> visitors;
 	private String id;
 	private String label;
 	private String number;

@@ -2,7 +2,7 @@ package com.ibm.api.psd2.api.beans;
 
 import java.io.Serializable;
 
-public class AmountBean implements Serializable, ResponseBean
+public class AmountBean implements Serializable
 {
 	/*
 		"value":{

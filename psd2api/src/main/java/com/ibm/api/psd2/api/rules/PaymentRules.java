@@ -3,21 +3,17 @@ package com.ibm.api.psd2.api.rules;
 import java.util.ArrayList;
 import java.util.Iterator;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
-import org.springframework.util.StringUtils;
 
 import com.ibm.api.psd2.api.Constants;
 import com.ibm.api.psd2.api.beans.AmountBean;
-import com.ibm.api.psd2.api.beans.account.BankAccountDetailsBean;
+import com.ibm.api.psd2.api.beans.payments.TxnChallengeAnswerBean;
+import com.ibm.api.psd2.api.beans.payments.TxnChargeBean;
+import com.ibm.api.psd2.api.beans.payments.TxnPartyBean;
+import com.ibm.api.psd2.api.beans.payments.TxnRequestBean;
 import com.ibm.api.psd2.api.beans.subscription.SubscriptionInfoBean;
 import com.ibm.api.psd2.api.beans.subscription.TransactionLimitBean;
 import com.ibm.api.psd2.api.beans.subscription.TransactionRequestTypeBean;
-import com.ibm.api.psd2.api.beans.transaction.TxnChallengeAnswerBean;
-import com.ibm.api.psd2.api.beans.transaction.TxnChargeBean;
-import com.ibm.api.psd2.api.beans.transaction.TxnPartyBean;
-import com.ibm.api.psd2.api.beans.transaction.TxnRequestBean;
-import com.ibm.api.psd2.api.dao.SubscriptionDao;
 
 @Component
 public class PaymentRules

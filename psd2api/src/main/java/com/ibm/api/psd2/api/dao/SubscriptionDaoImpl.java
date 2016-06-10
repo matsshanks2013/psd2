@@ -4,6 +4,9 @@ import static com.mongodb.client.model.Filters.and;
 import static com.mongodb.client.model.Filters.eq;
 import static com.mongodb.client.model.Projections.excludeId;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.bson.Document;
@@ -29,30 +32,7 @@ public class SubscriptionDaoImpl implements SubscriptionDao
 	@Value("${mongodb.collection.subscriptions}")
 	private String subscriptions;
 
-	public SubscriptionInfoBean getSubscriptionInfo(String username, String viewId,
-			String accountId, String bankId) throws Exception
-	{
-		logger.info("bankId = " + bankId + ", accountId = " + accountId + ", username = " + username
-				+ ", viewId =" + viewId);
-		MongoCollection<Document> coll = conn.getDB().getCollection(subscriptions);
-		FindIterable<Document> iterable = coll.find(
-				and(eq("accountId", accountId), eq("bank_id", bankId), eq("username", username)))
-				.projection(excludeId());
-		SubscriptionInfoBean s = null;
-
-		for (Document document : iterable)
-		{
-			if (document != null)
-			{
-				logger.info("message = " + document.toJson());
-			}
-			s = mdp.parse(document, new SubscriptionInfoBean());
-		}
-
-		return s;
-
-	}
-
+	@Override
 	public SubscriptionInfoBean getSubscriptionInfo(String username, String accountId,
 			String bankId) throws Exception
 	{
@@ -77,6 +57,35 @@ public class SubscriptionDaoImpl implements SubscriptionDao
 
 	}
 
+	@Override
+	public List<SubscriptionInfoBean> getSubscriptionInfo(String username, String bankId) throws Exception
+	{
+		logger.info("bankId = " + bankId + ", username = " + username);
+		MongoCollection<Document> coll = conn.getDB().getCollection(subscriptions);
+		FindIterable<Document> iterable = coll.find(
+				and(eq("bank_id", bankId), eq("username", username)))
+				.projection(excludeId());
+		
+		ArrayList<SubscriptionInfoBean> lst = null;
+		SubscriptionInfoBean s = null;
+
+		for (Document document : iterable)
+		{
+			if (document != null)
+			{
+				if (lst == null)
+				{
+					lst = new ArrayList<>();
+				}
+				logger.info("message = " + document.toJson());
+				s = mdp.parse(document, new SubscriptionInfoBean());
+				lst.add(s);
+			}
+		}
+		return lst;
+	}
+
+	@Override
 	public void createSubscriptionInfo(SubscriptionInfoBean s) throws Exception
 	{
 		MongoCollection<Document> coll = conn.getDB().getCollection(subscriptions);

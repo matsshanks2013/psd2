@@ -2,7 +2,7 @@ package com.ibm.api.psd2.api.beans;
 
 import java.io.Serializable;
 
-public class ErrorBean implements Serializable, ResponseBean
+public class ErrorBean implements Serializable
 {
 	String error;
 

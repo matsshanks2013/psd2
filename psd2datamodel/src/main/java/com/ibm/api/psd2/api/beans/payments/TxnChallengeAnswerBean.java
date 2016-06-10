@@ -1,4 +1,4 @@
-package com.ibm.api.psd2.api.beans.transaction;
+package com.ibm.api.psd2.api.beans.payments;
 
 public class TxnChallengeAnswerBean
 {

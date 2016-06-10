@@ -1,11 +1,10 @@
-package com.ibm.api.psd2.api.beans.transaction;
+package com.ibm.api.psd2.api.beans.payments;
 
 import java.io.Serializable;
 
 import com.ibm.api.psd2.api.beans.AmountBean;
-import com.ibm.api.psd2.api.beans.ResponseBean;
 
-public class TxnChargeBean implements Serializable, ResponseBean
+public class TxnChargeBean implements Serializable
 {
 
 	/*

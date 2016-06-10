@@ -2,7 +2,7 @@ package com.ibm.api.psd2.api.beans;
 
 import java.io.Serializable;
 
-public class BankBean implements Serializable, ResponseBean
+public class BankBean implements Serializable
 {
 	String id;
 	String short_name;

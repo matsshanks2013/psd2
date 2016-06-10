@@ -10,3 +10,5 @@ psd2datamodel/target/
 psd2demoapp/logs/
 psd2demoapp/target/
 psd2demowebclient/target/
+.recommenders/
+

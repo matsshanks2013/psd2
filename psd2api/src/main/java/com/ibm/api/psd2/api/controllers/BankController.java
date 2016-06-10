@@ -8,18 +8,13 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.ibm.api.psd2.api.Constants;
 import com.ibm.api.psd2.api.beans.BankBean;
-import com.ibm.api.psd2.api.beans.ResponseBean;
-import com.ibm.api.psd2.api.beans.account.BankAccountDetailsBean;
-import com.ibm.api.psd2.api.beans.account.BankAccountDetailsOwnerViewBean;
 import com.ibm.api.psd2.api.dao.BankDao;
 
 @RestController
@@ -50,10 +45,10 @@ public class BankController extends APIController
 
 	@PreAuthorize("#oauth2.hasScope('write')")
 	@RequestMapping(method = RequestMethod.GET, value = "/banks/{bankId}", produces = MediaType.APPLICATION_JSON_VALUE)
-	public @ResponseBody ResponseEntity<ResponseBean> getBankById(
+	public @ResponseBody ResponseEntity<BankBean> getBankById(
 			@PathVariable("bankId") String bankId)
 	{
-		ResponseEntity<ResponseBean> response;
+		ResponseEntity<BankBean> response;
 		try
 		{
 			BankBean b = bdao.getBankDetails(bankId);
@@ -61,7 +56,8 @@ public class BankController extends APIController
 		}
 		catch (Exception ex)
 		{
-			response = handleException(ex);
+			logger.error(ex);
+			response = ResponseEntity.badRequest().body(null);
 		}
 		return response;
 	}

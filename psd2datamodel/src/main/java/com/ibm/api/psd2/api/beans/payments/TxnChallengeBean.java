@@ -1,10 +1,8 @@
-package com.ibm.api.psd2.api.beans.transaction;
+package com.ibm.api.psd2.api.beans.payments;
 
 import java.io.Serializable;
 
-import com.ibm.api.psd2.api.beans.ResponseBean;
-
-public class TxnChallengeBean implements Serializable, ResponseBean
+public class TxnChallengeBean implements Serializable
 {
 	private String id;
 	private int allowed_attempts;

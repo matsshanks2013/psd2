@@ -15,7 +15,7 @@ import org.apache.storm.tuple.Values;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ibm.api.psd2.api.beans.account.BankAccountDetailsBean;
-import com.ibm.api.psd2.api.beans.transaction.TxnRequestDetailsBean;
+import com.ibm.api.psd2.api.beans.payments.TxnRequestDetailsBean;
 import com.ibm.psd2.integration.ArgumentsContainer;
 import com.ibm.psd2.integration.dao.MongoDao;
 import com.ibm.psd2.integration.dao.MongoDaoImpl;
