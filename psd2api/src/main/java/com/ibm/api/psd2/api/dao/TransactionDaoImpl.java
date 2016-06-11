@@ -1,19 +1,23 @@
 package com.ibm.api.psd2.api.dao;
 
-import static com.mongodb.client.model.Filters.and;
-import static com.mongodb.client.model.Filters.eq;
-import static com.mongodb.client.model.Projections.excludeId;
+import static com.mongodb.client.model.Filters.*;
+import static com.mongodb.client.model.Projections.*;
+import static com.mongodb.client.model.Sorts.*;
 
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.bson.Document;
+import org.bson.conversions.Bson;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
+import com.ibm.api.psd2.api.Constants;
 import com.ibm.api.psd2.api.beans.transactions.TransactionBean;
 import com.mongodb.client.FindIterable;
 import com.mongodb.client.MongoCollection;
@@ -55,18 +59,53 @@ public class TransactionDaoImpl implements TransactionDao
 		return t;
 	}
 
-	public List<TransactionBean> getTransactions(String bankId, String accountId, String sortDirection,int limit, String fromDate, String toDate, String sortBy, int number) throws Exception
+	public List<TransactionBean> getTransactions(String bankId, String accountId, String sortDirection,Integer limit, String fromDate, String toDate, String sortBy, Integer number) throws Exception
 	{
 		logger.info("bankId = " + bankId + ", accountId = " + accountId);
 		MongoCollection<Document> coll = conn.getDB().getCollection(transactions);
 		
 		
-//		List<Bson> criteria = new ArrayList<>();
-//		criteria.add(eq("this_account.id", accountId));
-//		criteria.add(eq("this_account.bank.national_identifier", bankId));
+		
+		SimpleDateFormat sdf = new SimpleDateFormat(Constants.TXN_DATE_FORMAT);
+		Date fDate = null;
+		Date tDate = null;
+		
+		List<Bson> criteria = new ArrayList<>();
+		
+		criteria.add(eq("this_account.id", accountId));
+		criteria.add(eq("this_account.bank.national_identifier", bankId));
 
-		FindIterable<Document> iterable = coll.find(and(eq("this_account.id", accountId), eq("this_account.bank.national_identifier", bankId)))
-				.projection(excludeId());
+		if (fromDate != null)
+		{
+			fDate = sdf.parse(fromDate);
+			criteria.add(gte("details.posted", fDate));
+		}
+		
+		if (toDate != null)
+		{
+			tDate = sdf.parse(toDate);
+			criteria.add(lte("details.posted", tDate));
+		}
+
+		Bson sortDirect = null;
+		
+		if (sortDirection != null && !sortDirection.isEmpty() && Constants.SORT_ASCENDING.equalsIgnoreCase(sortDirection))
+		{
+			sortDirect = ascending("details.posted");
+		}
+		else
+		{
+			sortDirect = descending("details.posted");
+		}
+		
+		int docLimit = 0;
+		if (limit != null)
+		{
+			docLimit = limit;
+		}
+		
+		FindIterable<Document> iterable = coll.find(and(criteria)).sort(sortDirect).limit(docLimit).projection(excludeId());
+		
 		List<TransactionBean> lst = null;
 		for (Document document : iterable)
 		{
