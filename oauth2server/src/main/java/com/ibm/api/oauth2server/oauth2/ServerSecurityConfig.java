@@ -84,6 +84,8 @@ public class ServerSecurityConfig extends WebSecurityConfigurerAdapter
 		http.authorizeRequests().antMatchers(HttpMethod.OPTIONS, "/oauth/**").permitAll();
 		http.authorizeRequests().antMatchers("/login", "/webjars/**", "/oauth/check_token", "/admin/**")
 				.permitAll().anyRequest().authenticated().and().formLogin().permitAll().and().csrf().disable();
+		http.requiresChannel().anyRequest().requiresSecure();
+		
 		// .and().csrf().csrfTokenRepository(csrfTokenRepository())
 		// .and().addFilterAfter(csrfHeaderFilter(), CsrfFilter.class);
 		// .and().exceptionHandling()
