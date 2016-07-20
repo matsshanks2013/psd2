@@ -5,6 +5,7 @@ import java.util.Date;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.ibm.api.psd2.api.beans.account.BankAccountDetailsBean;
 
 public class TxnRequestDetailsBean implements Serializable
 {
@@ -12,6 +13,7 @@ public class TxnRequestDetailsBean implements Serializable
 	public static final String TXN_STATUS_COMPLETED="COMPLETED";
 	public static final String TXN_STATUS_PENDING="PENDING";
 	public static final String TXN_STATUS_FAILED="FAILED";
+	public static final String TXN_STATUS_CANCELLED="CANCELLED";
 	
 	private String id;
 	private String type;
@@ -23,6 +25,7 @@ public class TxnRequestDetailsBean implements Serializable
 	Date end_date;
 	private TxnChallengeBean challenge;
 	private TxnChargeBean charge;
+	
 	
 	public String getId()
 	{
@@ -104,7 +107,9 @@ public class TxnRequestDetailsBean implements Serializable
 	{
 		this.charge = charge;
 	}
+	
 
+	
 	public String toString()
 	{
 		ObjectMapper mapper = new ObjectMapper();

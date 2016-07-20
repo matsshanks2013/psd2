@@ -2,17 +2,43 @@ package com.ibm.api.psd2.api.beans.subscription;
 
 import java.io.Serializable;
 import java.util.ArrayList;
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonInclude.Include;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
+@JsonInclude(value = Include.NON_EMPTY)
 public class SubscriptionInfoBean implements Serializable
 {
+	
+	public static final String STATUS_ACTIVE = "ACTIVE";
+	public static final String STATUS_LOCKED = "LOCKED";
 
 	private String username;
 	private String accountId;
 	private String bank_id;
 	private ArrayList<ViewIdBean> viewIds;
-	
-	private ArrayList<TransactionRequestTypeBean> transaction_request_types;
+	private String paymentmode;
+	private String validity;
+	private String clientId;
 	private ArrayList<TransactionLimitBean> limits;
+	private ArrayList<TransactionRequestTypeBean> transaction_request_types;
+	private String status;
+	
+	
+	
+	
+	public String getStatus() {
+		return status;
+	}
+	public void setStatus(String status) {
+		this.status = status;
+	}
+	public String getClientId() {
+		return clientId;
+	}
+	public void setClientId(String clientId) {
+		this.clientId = clientId;
+	}
 	public String getUsername()
 	{
 		return username;
@@ -39,6 +65,19 @@ public class SubscriptionInfoBean implements Serializable
 		this.limits = limits;
 	}
 	
+	
+	public String getPaymentmode() {
+		return paymentmode;
+	}
+	public void setPaymentmode(String paymentmode) {
+		this.paymentmode = paymentmode;
+	}
+	public String getValidity() {
+		return validity;
+	}
+	public void setValidity(String validity) {
+		this.validity = validity;
+	}
 	public String getAccountId()
 	{
 		return accountId;
@@ -92,6 +131,19 @@ public class SubscriptionInfoBean implements Serializable
 		}
 		
 		limits.add(ab);
+	}
+	
+	public String toString()
+	{
+		ObjectMapper mapper = new ObjectMapper();
+		try
+		{
+			return mapper.writeValueAsString(this);
+		} catch (Exception e)
+		{
+			e.printStackTrace();
+		}
+		return "";
 	}
 
 }

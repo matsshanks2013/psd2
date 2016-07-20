@@ -11,6 +11,10 @@ public class AmountBean implements Serializable
 			},
 	*/
 
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
 	private String currency;
 	private double amount;
 	
