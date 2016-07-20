@@ -109,4 +109,10 @@ public class BankAccountDaoImpl implements BankAccountDao
 		coll.insertOne(mdp.format(b));
 	}
 
+	@Override
+	public void updateBankAccountDetails(BankAccountDetailsBean b) throws Exception {
+		// TODO Auto-generated method stub
+		
+	}
+
 }

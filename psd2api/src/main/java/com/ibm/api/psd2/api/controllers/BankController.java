@@ -9,6 +9,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.ResponseBody;
@@ -61,5 +62,24 @@ public class BankController extends APIController
 		}
 		return response;
 	}
+	
+	//@PreAuthorize("#oauth2.hasScope('write')")
+		@RequestMapping(method = RequestMethod.POST, value = "/admin/bank/", produces = MediaType.ALL_VALUE)
+		public @ResponseBody ResponseEntity<String> createBank(@RequestBody BankBean bBean)
+		{
+			System.out.println("Inside createBank");
+			ResponseEntity<String> response;
+			try
+			{
+				bdao.insertBank(bBean);
+				response = ResponseEntity.ok("SUCCESS");
+			}
+			catch (Exception ex)
+			{
+				logger.error(ex);
+				response = ResponseEntity.badRequest().body(null);
+			}
+			return response;
+		}
 
 }

@@ -14,6 +14,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.oauth2.provider.OAuth2Authentication;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
@@ -62,12 +63,16 @@ public class BankAccountController extends APIController
 		{
 			// @Todo: Check if the user is authorized to view this account or
 			// not.
-
+			
+			OAuth2Authentication oauth2 = (OAuth2Authentication) auth;
 			String user = (String) auth.getPrincipal();
+			logger.debug("Retrieving user:" + user);
 			ViewIdBean ownerView = new ViewIdBean();
 			ownerView.setId(Constants.OWNER_VIEW);
+			List<SubscriptionInfoBean> lstSib = sdao.getSubscriptionInfo(user, oauth2.getOAuth2Request().getClientId(),
+					 bankId);
 
-			List<SubscriptionInfoBean> lstSib = sdao.getSubscriptionInfo(user, bankId);
+			
 
 			if (lstSib == null)
 			{
@@ -126,11 +131,13 @@ public class BankAccountController extends APIController
 		ResponseEntity<BankAccountDetailsViewBean> response;
 		try
 		{
+			OAuth2Authentication oauth2 = (OAuth2Authentication) auth;
 			String user = (String) auth.getPrincipal();
 			ViewIdBean specifiedView = new ViewIdBean();
 			specifiedView.setId(viewId);
 
-			SubscriptionInfoBean sib = sdao.getSubscriptionInfo(user, accountId, bankId);
+			SubscriptionInfoBean sib = sdao.getSubscriptionInfo(user, oauth2.getOAuth2Request().getClientId(),
+					accountId, bankId);
 			if (sib == null || !sib.getViewIds().contains(specifiedView))
 			{
 				throw new IllegalAccessException("Not Subscribed");
@@ -171,11 +178,13 @@ public class BankAccountController extends APIController
 		ResponseEntity<BankAccountDetailsViewBean> response;
 		try
 		{
+			OAuth2Authentication oauth2 = (OAuth2Authentication) auth;
 			String user = (String) auth.getPrincipal();
 			ViewIdBean ownerView = new ViewIdBean();
 			ownerView.setId(Constants.OWNER_VIEW);
 
-			SubscriptionInfoBean sib = sdao.getSubscriptionInfo(user, accountId, bankId);
+			SubscriptionInfoBean sib = sdao.getSubscriptionInfo(user, oauth2.getOAuth2Request().getClientId(),
+					accountId, bankId);
 			if (sib == null || !sib.getViewIds().contains(ownerView))
 			{
 				throw new IllegalAccessException("Not Subscribed");
@@ -236,11 +245,13 @@ public class BankAccountController extends APIController
 		ResponseEntity<TransactionBean> response;
 		try
 		{
+			OAuth2Authentication oauth2=(OAuth2Authentication)auth;
 			String user = (String) auth.getPrincipal();
 			ViewIdBean ownerView = new ViewIdBean();
 			ownerView.setId(Constants.OWNER_VIEW);
 
-			SubscriptionInfoBean sib = sdao.getSubscriptionInfo(user, accountId, bankId);
+		SubscriptionInfoBean sib = sdao.getSubscriptionInfo(user, oauth2.getOAuth2Request().getClientId(),
+					accountId, bankId);
 			if (sib == null || !sib.getViewIds().contains(ownerView))
 			{
 				throw new IllegalAccessException("Not Subscribed");
@@ -272,11 +283,13 @@ public class BankAccountController extends APIController
 		ResponseEntity<List<TransactionBean>> response;
 		try
 		{
+			OAuth2Authentication oauth2 = (OAuth2Authentication) auth;
 			String user = (String) auth.getPrincipal();
 			ViewIdBean ownerView = new ViewIdBean();
 			ownerView.setId(Constants.OWNER_VIEW);
 
-			SubscriptionInfoBean sib = sdao.getSubscriptionInfo(user, accountId, bankId);
+			SubscriptionInfoBean sib = sdao.getSubscriptionInfo(user, oauth2.getOAuth2Request().getClientId(),
+					accountId, bankId);
 			if (sib == null || !sib.getViewIds().contains(ownerView))
 			{
 				throw new IllegalAccessException("Not Subscribed");

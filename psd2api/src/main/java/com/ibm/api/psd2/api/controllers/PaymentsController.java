@@ -18,6 +18,9 @@ import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.ibm.api.psd2.api.beans.ChallengeAnswerBean;
+import com.ibm.api.psd2.api.beans.payments.PaymentRequestBean;
+import com.ibm.api.psd2.api.beans.payments.PaymentResponseBean;
 import com.ibm.api.psd2.api.beans.payments.TxnChallengeAnswerBean;
 import com.ibm.api.psd2.api.beans.payments.TxnPartyBean;
 import com.ibm.api.psd2.api.beans.payments.TxnRequestBean;
@@ -28,6 +31,7 @@ import com.ibm.api.psd2.api.beans.subscription.ViewIdBean;
 import com.ibm.api.psd2.api.dao.PaymentsDao;
 import com.ibm.api.psd2.api.dao.SubscriptionDao;
 import com.ibm.api.psd2.api.integration.KafkaMessageProducer;
+import org.springframework.security.oauth2.provider.OAuth2Authentication;
 
 @RestController
 public class PaymentsController extends APIController
@@ -57,21 +61,30 @@ public class PaymentsController extends APIController
 	public @ResponseBody ResponseEntity<TxnRequestDetailsBean> createTransactionRequest(
 			@PathVariable("bankId") String bankId, @PathVariable("accountId") String accountId,
 			@PathVariable("viewId") String viewId, @PathVariable("txnType") String txnType,
-			@RequestBody TxnRequestBean trb, Authentication auth)
+			@RequestBody(required = true) TxnRequestBean trb, Authentication auth)
 	{
 		ResponseEntity<TxnRequestDetailsBean> response;
 		try
 		{
+			OAuth2Authentication oauth2 = (OAuth2Authentication) auth;
 			String user = (String) auth.getPrincipal();
+
 			ViewIdBean specifiedView = new ViewIdBean();
 			specifiedView.setId(viewId);
 
-			SubscriptionInfoBean sib = sdao.getSubscriptionInfo(user, accountId, bankId);
-			if (sib == null || !sib.getViewIds().contains(specifiedView))
+			SubscriptionInfoBean sib = sdao.getSubscriptionInfo(user, oauth2.getOAuth2Request().getClientId(),
+					accountId, bankId);
+			if (!validateSubscription(sib, specifiedView))
 			{
 				throw new IllegalAccessException("Not Subscribed");
 			}
-						
+
+			if (trb == null || trb.getTo() == null
+					|| (accountId.equals(trb.getTo().getAccount_id()) && bankId.equals(trb.getTo().getBank_id())))
+			{
+				throw new IllegalArgumentException("Invalid Transaction Request");
+			}
+
 			TxnPartyBean payee = new TxnPartyBean(bankId, accountId);
 			TxnRequestDetailsBean t = pdao.createTransactionRequest(sib, trb, payee, txnType);
 
@@ -88,23 +101,73 @@ public class PaymentsController extends APIController
 		}
 		return response;
 	}
+	
+	@PreAuthorize("#oauth2.hasScope('write')")
+	@RequestMapping(method = RequestMethod.POST, value = "pay/{bankId}/accounts/{accountId}/{viewId}/transaction-request-types/{txnType}", produces = MediaType.APPLICATION_JSON_VALUE)
+	public @ResponseBody ResponseEntity<PaymentResponseBean> createPaymentRequest(
+			@PathVariable("bankId") String bankId, @PathVariable("accountId") String accountId,
+			@PathVariable("viewId") String viewId, @PathVariable("txnType") String txnType,
+			@RequestBody(required = true) PaymentRequestBean prb, Authentication auth)
+	{
+		ResponseEntity<PaymentResponseBean> response;
+		try
+		{
+			OAuth2Authentication oauth2 = (OAuth2Authentication) auth;
+			String user = (String) auth.getPrincipal();
+
+			ViewIdBean specifiedView = new ViewIdBean();
+			specifiedView.setId(viewId);
+
+			SubscriptionInfoBean sib = sdao.getSubscriptionInfo(user, oauth2.getOAuth2Request().getClientId(),
+					accountId, bankId);
+			if (!validateSubscription(sib, specifiedView))
+			{
+				throw new IllegalAccessException("Not Subscribed");
+			}
+			logger.info("prb");
+			logger.info("From" + prb.getPaymentInfo()[0].getFrom());
+			logger.info("check account match" + accountId.equals(prb.getPaymentInfo()[0].getFrom().getIban()));
+			logger.info("swift bic match" + bankId.equals(prb.getPaymentInfo()[0].getFrom().getSwift_bic()));
+
+			if (prb == null || prb.getPaymentInfo()[0].getFrom() == null
+					|| (accountId.equals(prb.getPaymentInfo()[0].getFrom().getIban()) && bankId.equals(prb.getPaymentInfo()[0].getFrom().getSwift_bic())))
+			{
+				throw new IllegalArgumentException("Invalid Transaction Request");
+			}
+
+			
+			PaymentResponseBean pres = pdao.createPaymentRequest(sib, prb, txnType);
+
+		
+
+			response = ResponseEntity.ok(pres);
+		} catch (Exception ex)
+		{
+			logger.error(ex);
+			response = ResponseEntity.badRequest().body(null);
+		}
+		return response;
+	}
+
 
 	@PreAuthorize("#oauth2.hasScope('write')")
 	@RequestMapping(method = RequestMethod.POST, value = "banks/{bankId}/accounts/{accountId}/{viewId}/transaction-request-types/{txnType}/transaction-requests/{txnReqId}/challenge", produces = MediaType.APPLICATION_JSON_VALUE)
 	public @ResponseBody ResponseEntity<TxnRequestDetailsBean> answerTransactionChallenge(
 			@PathVariable("bankId") String bankId, @PathVariable("accountId") String accountId,
 			@PathVariable("viewId") String viewId, @PathVariable("txnType") String txnType,
-			@PathVariable("txnReqId") String txnReqId, @RequestBody TxnChallengeAnswerBean t, Authentication auth)
+			@PathVariable("txnReqId") String txnReqId, @RequestBody ChallengeAnswerBean t, Authentication auth)
 	{
 		ResponseEntity<TxnRequestDetailsBean> response;
 		try
 		{
+			OAuth2Authentication oauth2 = (OAuth2Authentication) auth;
 			String user = (String) auth.getPrincipal();
 			ViewIdBean specifiedView = new ViewIdBean();
 			specifiedView.setId(viewId);
 
-			SubscriptionInfoBean sib = sdao.getSubscriptionInfo(user, accountId, bankId);
-			if (sib == null || !sib.getViewIds().contains(specifiedView))
+			SubscriptionInfoBean sib = sdao.getSubscriptionInfo(user, oauth2.getOAuth2Request().getClientId(),
+					accountId, bankId);
+			if (!validateSubscription(sib, specifiedView))
 			{
 				throw new IllegalAccessException("Not Subscribed");
 			}
@@ -128,22 +191,26 @@ public class PaymentsController extends APIController
 
 	@PreAuthorize("#oauth2.hasScope('write')")
 	@RequestMapping(method = RequestMethod.GET, value = "banks/{bankId}/accounts/{accountId}/{viewId}/transaction-request-types", produces = MediaType.APPLICATION_JSON_VALUE)
-	public @ResponseBody ResponseEntity<ArrayList<TransactionRequestTypeBean>> getTransactionRequestTypes(
+	public @ResponseBody ResponseEntity<List<TransactionRequestTypeBean>> getTransactionRequestTypes(
 			@PathVariable("bankId") String bankId, @PathVariable("accountId") String accountId,
 			@PathVariable("viewId") String viewId, Authentication auth)
 	{
-		ResponseEntity<ArrayList<TransactionRequestTypeBean>> response;
+		ResponseEntity<List<TransactionRequestTypeBean>> response;
 		try
 		{
+			OAuth2Authentication oauth2 = (OAuth2Authentication) auth;
 			String user = (String) auth.getPrincipal();
 			ViewIdBean specifiedView = new ViewIdBean();
 			specifiedView.setId(viewId);
 
-			SubscriptionInfoBean sib = sdao.getSubscriptionInfo(user, accountId, bankId);
-			if (sib == null || !sib.getViewIds().contains(specifiedView))
+			SubscriptionInfoBean sib = sdao.getSubscriptionInfo(user, oauth2.getOAuth2Request().getClientId(),
+					accountId, bankId);
+
+			if (!validateSubscription(sib, specifiedView))
 			{
 				throw new IllegalAccessException("Not Subscribed");
 			}
+
 			response = ResponseEntity.ok(sib.getTransaction_request_types());
 		} catch (Exception e)
 		{
@@ -153,7 +220,6 @@ public class PaymentsController extends APIController
 		return response;
 	}
 
-	// /banks/psd201-bank-x--uk/accounts/007007007007007007007/owner/transaction-requests
 	@PreAuthorize("#oauth2.hasScope('write')")
 	@RequestMapping(method = RequestMethod.GET, value = "banks/{bankId}/accounts/{accountId}/{viewId}/transaction-requests", produces = MediaType.APPLICATION_JSON_VALUE)
 	public @ResponseBody ResponseEntity<List<TxnRequestDetailsBean>> getTransactionRequests(
@@ -163,12 +229,14 @@ public class PaymentsController extends APIController
 		ResponseEntity<List<TxnRequestDetailsBean>> response;
 		try
 		{
+			OAuth2Authentication oauth2 = (OAuth2Authentication) auth;
 			String user = (String) auth.getPrincipal();
 			ViewIdBean specifiedView = new ViewIdBean();
 			specifiedView.setId(viewId);
 
-			SubscriptionInfoBean sib = sdao.getSubscriptionInfo(user, accountId, bankId);
-			if (sib == null || !sib.getViewIds().contains(specifiedView))
+			SubscriptionInfoBean sib = sdao.getSubscriptionInfo(user, oauth2.getOAuth2Request().getClientId(),
+					accountId, bankId);
+			if (!validateSubscription(sib, specifiedView))
 			{
 				throw new IllegalAccessException("Not Subscribed");
 			}
@@ -182,5 +250,4 @@ public class PaymentsController extends APIController
 		}
 		return response;
 	}
-
 }

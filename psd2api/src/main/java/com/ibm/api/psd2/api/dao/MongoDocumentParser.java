@@ -1,5 +1,4 @@
 package com.ibm.api.psd2.api.dao;
-
 import java.lang.reflect.Method;
 import java.util.Map.Entry;
 import java.util.ArrayList;
@@ -41,7 +40,6 @@ public class MongoDocumentParser
 
 	private <T> Method getMethod(T t, String methodName) throws Exception
 	{
-		Class<?> c = null;
 		Method[] ms = t.getClass().getMethods();
 		Method rm = null;
 		for (Method m : ms)
@@ -67,7 +65,6 @@ public class MongoDocumentParser
 		try
 		{
 			Method m = getMethod(t, "set"+key);
-//			m = t.getClass().getMethod("set" + key, value.getClass());
 			m.invoke(t, value);
 		}
 		catch (Exception e)

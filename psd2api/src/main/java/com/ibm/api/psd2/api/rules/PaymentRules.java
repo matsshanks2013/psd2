@@ -9,6 +9,7 @@ import org.springframework.stereotype.Component;
 import com.ibm.api.psd2.api.Constants;
 import com.ibm.api.psd2.api.beans.AmountBean;
 import com.ibm.api.psd2.api.beans.ChallengeAnswerBean;
+import com.ibm.api.psd2.api.beans.payments.PaymentRequestBean;
 import com.ibm.api.psd2.api.beans.payments.TxnChallengeAnswerBean;
 import com.ibm.api.psd2.api.beans.payments.TxnChargeBean;
 import com.ibm.api.psd2.api.beans.payments.TxnPartyBean;
@@ -94,6 +95,21 @@ public class PaymentRules {
 			if (limit.getTransaction_request_type().getValue().equals(txnType)
 					&& limit.getAmount().getCurrency().equals(trb.getValue().getCurrency())
 					&& limit.getAmount().getAmount() > trb.getValue().getAmount()) {
+				return true;
+			}
+		}
+		return false;
+	}
+	public boolean checkLimit(PaymentRequestBean prb, SubscriptionInfoBean sib, String txnType) {
+
+		ArrayList<TransactionLimitBean> limits = sib.getLimits();
+
+		for (Iterator<TransactionLimitBean> iterator = limits.iterator(); iterator.hasNext();) {
+			TransactionLimitBean limit = iterator.next();
+
+			if (limit.getTransaction_request_type().getValue().equals(txnType)
+					&& limit.getAmount().getCurrency().equals(prb.getPaymentInfo()[0].getBody().getValue().getCurrency())
+					&& limit.getAmount().getAmount() > prb.getPaymentInfo()[0].getBody().getValue().getAmount()) {
 				return true;
 			}
 		}

@@ -9,6 +9,7 @@ public interface BankAccountDao
 	public BankAccountDetailsBean getBankAccountDetails(String bankId, String accountId) throws Exception;
 	public BankAccountDetailsBean getBankAccountDetails(String bankId, String accountId, String username) throws Exception;
 	public void createBankAccountDetails(BankAccountDetailsBean b) throws Exception;
-	public ArrayList<BankAccountDetailsBean> getBankAccounts(String username, String bank_id) throws Exception; 
+	public ArrayList<BankAccountDetailsBean> getBankAccounts(String username, String bank_id) throws Exception;
+	public void updateBankAccountDetails(BankAccountDetailsBean b) throws Exception;
 
 }

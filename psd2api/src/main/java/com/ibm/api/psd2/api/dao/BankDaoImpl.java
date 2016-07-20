@@ -73,4 +73,12 @@ public class BankDaoImpl implements BankDao
 		}		
 		return b;
 	}
+	
+	@Override
+	public void insertBank(BankBean bank) throws Exception {
+		// TODO Auto-generated method stub
+		MongoCollection<Document> collection = conn.getDB().getCollection(banks);
+		collection.insertOne(mdp.format(bank));
+		
+	}
 }
